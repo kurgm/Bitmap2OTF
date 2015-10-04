@@ -1,2 +1,19 @@
 # Bitmap2OTF
-Generate bitmap-style OpenType fonts from image files
+画像ファイルからビットマップ風の (name-keyed) OpenType フォントを生成します
+
+## 要件
+Bitmap2OTF の実行には以下のソフトウェアとライブラリが必要です:
+
+- Python 2.7
+- [fontTools](https://github.com/behdad/fonttools)
+- [Python Imaging Library (PIL)](http://www.pythonware.com/products/pil/)
+
+## 使い方
+`python bitmap2otf.py PARAMETER-FILE.xml`
+
+`PARAMETER-FILE.xml` は XML-ベースのパラメータファイルです。サンプルは
+`sample/sample.xml` にあります。
+
+## ライセンス
+このソフトウェアは MIT License のもとで公開しています。`LICENSE`
+ファイルを参照してください。
