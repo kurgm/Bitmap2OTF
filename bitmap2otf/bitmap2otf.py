@@ -60,7 +60,7 @@ def main(configfilepath):
 	cfg = Config(configfilepath)
 	f = cfg.toBitmapFont()
 	otf = ttLib.TTFont()
-	otf.importXML(cfg.templateTTXpath, quiet=True)
+	otf.importXML(cfg.templateTTXpath)
 
 	dw, dh = cfg.outlineCfg["dotsize_x"], cfg.outlineCfg["dotsize_y"]
 
@@ -341,7 +341,7 @@ def main(configfilepath):
 		bst.ppemX = int((ascent + descent) * dh / dw)
 
 	for path in cfg.templateTTX2:
-		otf.importXML(path, quiet=True)
+		otf.importXML(path)
 
 	otf.save(cfg.outputTo)
 
