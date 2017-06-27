@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from bitmap import Bitmap
 
 unicodeRanges = [
@@ -218,7 +223,6 @@ class BitmapFont(object):
         return int(sum(aws, 0.0) * dw / len(aws))
 
     def getOS2ulUnicodeRanges(self):
-        """Returns [long, long, long, long]"""
 
         ranges = [False] * 128
 
@@ -234,13 +238,13 @@ class BitmapFont(object):
                     ranges[bit] = True
                     break
 
-        res = [0L, 0L, 0L, 0L]
+        res = [0, 0, 0, 0]
 
         for i in range(4):
             i32 = i * 32
             for j, r in enumerate(ranges[i32:i32 + 32]):
                 if r:
-                    res[i] |= 1L << j
+                    res[i] |= 1 << j
 
         return res
 

@@ -1,5 +1,23 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from functools import reduce
+import sys
+
+PY2 = sys.version_info < (3, 0)
+
+if PY2:
+    pass
+else:
+    unichr = chr
+
+    def chr(x):
+        return unichr(x).encode("latin-1")
+
 
 def _makebold_row_type0(row, align=False):
     row0 = row + [0]
@@ -56,7 +74,7 @@ _polygons_bit2edgedirs = {
 
 
 def _binary2imagedata(bitarray):
-    bytes = ""
+    data = b""
     for i in range(0, len(bitarray), 8):
         byteArray = bitarray[i:i + 8]
         if len(byteArray) < 8:
@@ -66,9 +84,9 @@ def _binary2imagedata(bitarray):
             byte <<= 1
             if byteArray[i]:
                 byte |= 1
-        bytes += chr(byte)
+        data += chr(byte)
 
-    return bytes
+    return data
 
 
 class Bitmap(object):
