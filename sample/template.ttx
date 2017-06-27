@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ttFont sfntVersion="OTTO" ttLibVersion="2.5">
+<ttFont sfntVersion="OTTO" ttLibVersion="3.13">
 
   <GlyphOrder>
     <!-- This GlyphOrder will be discarded by Bitmap2OTF. -->
@@ -14,7 +14,7 @@
     <checkSumAdjustment value="0x00000000"/>
     <magicNumber value="0x5f0f3cf5"/>
     <flags value="00000000 00001011"/>
-    
+
     <!-- These values will be recalculated by Bitmap2OTF -->
     <unitsPerEm value="1000"/>
     <created value="Thu Jan 01 00:00:00 1970"/>
@@ -23,7 +23,7 @@
     <yMin value="0"/>
     <xMax value="0"/>
     <yMax value="0"/>
-    
+
     <macStyle value="00000000 00000000"/>
     <lowestRecPPEM value="8"/><!-- This value will be recalculated by Bitmap2OTF -->
     <fontDirectionHint value="2"/>
@@ -32,7 +32,7 @@
   </head>
 
   <hhea>
-    <tableVersion value="1.0"/>
+    <tableVersion value="0x00010000"/>
     <ascent value="0"/><!-- This value will be recalculated by Bitmap2OTF -->
     <descent value="0"/><!-- This value will be recalculated by Bitmap2OTF -->
     <lineGap value="100"/>
@@ -87,13 +87,13 @@
       <bMidline value="0"/>
       <bXHeight value="0"/>
     </panose>
-    
+
     <!-- These values will be recalculated by Bitmap2OTF -->
     <ulUnicodeRange1 value="00000000 00000000 00000000 00000001"/>
     <ulUnicodeRange2 value="00000000 00000000 00000000 00000000"/>
     <ulUnicodeRange3 value="00000000 00000000 00000000 00000000"/>
     <ulUnicodeRange4 value="00000000 00000000 00000000 00000000"/>
-    
+
     <achVendID value=""/>
     <fsSelection value="00000000 11000000"/>
     <usFirstCharIndex value="0"/>
@@ -401,6 +401,8 @@
   </post>
 
   <CFF>
+    <major value="1"/>
+    <minor value="0"/>
     <CFFFont name="Untitled"><!-- The "name" will be recalculated by Bitmap2OTF -->
       <!-- "version", "Copyright", "FullName", "FamilyName" will be recalculated by Bitmap2OTF -->
       <ItalicAngle value="0"/>
@@ -446,7 +448,7 @@
 
   <!-- You can omit these three table "vhea", "vmtx", "VORG" -->
   <vhea>
-    <tableVersion value="1.0625"/>
+    <tableVersion value="0x00011000"/>
     <ascent value="0"/><!-- This value will be recalculated by Bitmap2OTF -->
     <descent value="-0"/><!-- This value will be recalculated by Bitmap2OTF -->
     <lineGap value="100"/>
@@ -495,7 +497,7 @@
           <vertAdvance value="10"/>
         </BigGlyphMetrics>
         <rawimagedata>
-          00   
+          00
         </rawimagedata>
       </ebdt_bitmap_format_7>
     </strikedata>

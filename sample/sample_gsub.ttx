@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ttFont sfntVersion="OTTO" ttLibVersion="2.5">
+<ttFont sfntVersion="OTTO" ttLibVersion="3.13">
 
   <GSUB>
-    <Version value="1.0"/>
+    <Version value="0x00010000"/>
     <ScriptList>
       <!-- ScriptCount=2 -->
       <ScriptRecord index="0">
