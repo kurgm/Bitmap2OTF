@@ -46,17 +46,17 @@ def getBitmapMetrics(bitmap, vertBearingX=0):
 
 
 def updatesbitLineMetrics(metrics, bst):
-    bst.hori.minOriginSB = min(bst.hori.minOriginSB,  metrics.horiBearingX)
+    bst.hori.minOriginSB = min(bst.hori.minOriginSB, metrics.horiBearingX)
     bst.hori.minAdvanceSB = min(
         bst.hori.minAdvanceSB, metrics.horiAdvance - metrics.width - metrics.horiBearingX)
-    bst.hori.maxBeforeBL = max(bst.hori.maxBeforeBL,  metrics.horiBearingY)
+    bst.hori.maxBeforeBL = max(bst.hori.maxBeforeBL, metrics.horiBearingY)
     bst.hori.minAfterBL = min(bst.hori.minAfterBL,
                               metrics.horiBearingY - metrics.height)
 
-    bst.vert.minOriginSB = min(bst.vert.minOriginSB,  metrics.vertBearingY)
+    bst.vert.minOriginSB = min(bst.vert.minOriginSB, metrics.vertBearingY)
     bst.vert.minAdvanceSB = min(
         bst.vert.minAdvanceSB, metrics.vertAdvance - metrics.height - metrics.vertBearingY)
-    bst.vert.maxBeforeBL = max(bst.vert.maxBeforeBL,  metrics.vertBearingX)
+    bst.vert.maxBeforeBL = max(bst.vert.maxBeforeBL, metrics.vertBearingX)
     bst.vert.minAfterBL = min(bst.vert.minAfterBL,
                               metrics.vertBearingX - metrics.width)
 
@@ -258,7 +258,7 @@ def main(configfilepath):
     os_2Table.ulUnicodeRange1, os_2Table.ulUnicodeRange2, os_2Table.ulUnicodeRange3, os_2Table.ulUnicodeRange4 = f.getOS2ulUnicodeRanges()
     os_2Table.sTypoAscender = int(ascent * dh)
     os_2Table.sTypoDescender = -int(descent * dh)
-    os_2Table.usWinAscent = max(os_2Table.usWinAscent,  int(fontBBX[3]))
+    os_2Table.usWinAscent = max(os_2Table.usWinAscent, int(fontBBX[3]))
     os_2Table.usWinDescent = max(os_2Table.usWinDescent, int(-fontBBX[1]))
     # TODO(kurgm)  OS/2.ulCodePageRange1,2
     os_2Table.sxHeight = int(cfg.fontinfo.settings["x-height"] * dh)

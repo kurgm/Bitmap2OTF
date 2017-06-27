@@ -230,9 +230,9 @@ class Bitmap(object):
         for y in range(self.height + 1):
             for x in range(self.width + 1):
                 b0 = bool(self.getPixel2(x - 1, y - 1))
-                b1 = bool(self.getPixel2(x,     y - 1))
+                b1 = bool(self.getPixel2(x, y - 1))
                 b2 = bool(self.getPixel2(x - 1, y))
-                b3 = bool(self.getPixel2(x,     y))
+                b3 = bool(self.getPixel2(x, y))
                 edgedirs = _polygons_bit2edgedirs[(b0, b1, b2, b3)]
                 vertices.extend([[x - self.origin[0], y - self.origin[1],
                                   dir_in, dir_out] for dir_in, dir_out in edgedirs])
@@ -256,17 +256,25 @@ class Bitmap(object):
 
                 next_dir_in = 3 - v[3]
                 if next_dir_in == _D:
-                    v1 = sorted([vn for vn in vertices_by_dir_in[next_dir_in] if vn[0]
-                                 == v[0] and vn[1] > v[1]], key=lambda vn: vn[1] - v[1])[0]
+                    v1 = sorted(
+                        [vn for vn in vertices_by_dir_in[next_dir_in]
+                            if vn[0] == v[0] and vn[1] > v[1]],
+                        key=lambda vn: vn[1] - v[1])[0]
                 elif next_dir_in == _U:
-                    v1 = sorted([vn for vn in vertices_by_dir_in[next_dir_in] if vn[0]
-                                 == v[0] and vn[1] < v[1]], key=lambda vn: v[1] - vn[1])[0]
+                    v1 = sorted(
+                        [vn for vn in vertices_by_dir_in[next_dir_in]
+                            if vn[0] == v[0] and vn[1] < v[1]],
+                        key=lambda vn: v[1] - vn[1])[0]
                 elif next_dir_in == _L:
-                    v1 = sorted([vn for vn in vertices_by_dir_in[next_dir_in] if vn[1]
-                                 == v[1] and vn[0] > v[0]], key=lambda vn: vn[0] - v[0])[0]
+                    v1 = sorted(
+                        [vn for vn in vertices_by_dir_in[next_dir_in]
+                            if vn[1] == v[1] and vn[0] > v[0]],
+                        key=lambda vn: vn[0] - v[0])[0]
                 elif next_dir_in == _R:
-                    v1 = sorted([vn for vn in vertices_by_dir_in[next_dir_in] if vn[1]
-                                 == v[1] and vn[0] < v[0]], key=lambda vn: v[0] - vn[0])[0]
+                    v1 = sorted(
+                        [vn for vn in vertices_by_dir_in[next_dir_in]
+                            if vn[1] == v[1] and vn[0] < v[0]],
+                        key=lambda vn: v[0] - vn[0])[0]
                 vertices.remove(v1)
                 vertices_by_dir_in[v1[2]].remove(v1)
                 if v1 is v0:

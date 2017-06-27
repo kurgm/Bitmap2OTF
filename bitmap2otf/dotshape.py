@@ -123,8 +123,8 @@ class DotShapeExternal(DotShape):
         sh = sy * dh
         startX = _evalxy(self.startX, x=sw, y=sh)
         startY = _evalxy(self.startY, x=sw, y=sh)
-        endX = _evalxy(self.endX,   x=sw, y=sh)
-        endY = _evalxy(self.endY,   x=sw, y=sh)
+        endX = _evalxy(self.endX, x=sw, y=sh)
+        endY = _evalxy(self.endY, x=sw, y=sh)
 
         subrno = subrs[0]
         e2sX = startX - endX
