@@ -259,7 +259,7 @@ def main(configfilepath):
 
     os_2Table = otf["OS/2"]
     os_2Table.xAvgCharWidth = f.getXAvgCharWidth(dw=dw)
-    os_2Table.ulUnicodeRange1, os_2Table.ulUnicodeRange2, os_2Table.ulUnicodeRange3, os_2Table.ulUnicodeRange4 = f.getOS2ulUnicodeRanges()
+    os_2Table.recalcUnicodeRanges(otf)
     os_2Table.sTypoAscender = int(ascent * dh)
     os_2Table.sTypoDescender = -int(descent * dh)
     os_2Table.usWinAscent = max(os_2Table.usWinAscent, int(fontBBX[3]))
