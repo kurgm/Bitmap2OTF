@@ -5,12 +5,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import logging
 import os.path
 import re
-from xml.etree import ElementTree
+import sys
 
-from fontTools.misc.textTools import safeEval
 from PIL import Image
 
 from bitmapfont import BitmapFont
@@ -19,6 +19,13 @@ from dotshape import DotShapeExternal
 from dotshape import DotShapePixelOutline
 
 log = logging.getLogger(__name__)
+
+PY2 = sys.version_info < (3, 0)
+
+if PY2:
+    pass
+else:
+    basestring = str
 
 
 def _myord(c):
@@ -41,88 +48,87 @@ class ConfigFileError(Exception):
     pass
 
 
-def _findChildOrError(elem, path, attribute=None):
-    c = elem.find("./" + path)
-    if c is None:
+def getItem(obj, key, objname="object"):
+    try:
+        return obj[key]
+    except KeyError:
         raise ConfigFileError(
-            "element '{}' not found under element '{}'".format(path, elem.tag))
-    if attribute is not None:
-        return _findAttrOrError(c, attribute)
-    return c
+            "property '{}' not found in {}".format(key, objname))
 
 
-def _findAttrOrError(elem, attribute):
-    v = elem.get(attribute)
-    if v is None:
-        raise ConfigFileError(
-            "element '{}' has no attribute '{}'".format(elem.tag, attribute))
-    return v
-
-
-def _getGlyphOptions(elem, default=[], basepath=""):
-    items = elem.items()
-    res = list(default)
-    for key, val in items:
-        if key in ("fromChar", "fromCodepoint", "fromName") and elem.tag == "Copy":
-            continue
-        if key in ("stepx", "stepy", "charsPerRow") and elem.tag in ("Image", "Glyphs"):
-            continue
-
-        if key in ("x", "y") and elem.tag in ("Image", "Glyph", "Glyphs"):
-            val = safeEval(val)
-        elif key in ("codepoint", "advancewidth", "advanceheight", "bitmapwidth", "bitmapheight", "originx", "originy", "voriginy"):
-            val = safeEval(val)
-        elif key == "src" and elem.tag == "Image":
-            val = os.path.join(basepath, val)
-        elif key == "name":
-            pass
-        elif key == "char":
-            res.append(("codepoint", _myord(val)[0]))
-            continue
-        else:
-            raise ConfigFileError(
-                "element '{}' has unknown glyph attribute '{}'".format(elem.tag, key))
-        res.append((key, val))
+def _getGlyphGeometricOptions(obj, default={}):
+    res = default.copy()
+    for key, val in obj.items():
+        if key in ("advancewidth", "advanceheight", "bitmapSize", "origin", "voriginy"):
+            res[key] = val
     return res
 
 
-def _isVariationSelector(code):
-    isVS = 0xFE00 <= code <= 0xFE0F or 0xE0100 <= code <= 0xE01EF
-    if isVS:
-        log.warn("variation selectors are not supported for now.")
-    return isVS
-
-
-def _myord_filterTabAndNewlines(s):
-    # \t, \r, \n
-    return [c for c in _myord(s) if c not in (9, 10, 13) and not _isVariationSelector(c)]
-
-
-def _getCodepointList(elem):
-    return _myord_filterTabAndNewlines(elem.text or "")
-
-
-def _getNameOrCodepointList(elem, allowAllGlyphs=False):
-    res = []
-    res.extend(("codepoint", c) for c in _getCodepointList(elem))
-    for subelem in elem:
-        if allowAllGlyphs and subelem.tag == "AllGlyphs":
-            res.append(("allglyphs", None))
-            continue
-        if subelem.tag != "Glyph":
+def _getGlyphSlotInfos(obj):
+    if "chars" in obj:
+        i = {"codepoint", "name", "char"}.intersection(obj.keys())
+        if i:
             raise ConfigFileError(
-                "unknown element '{}' found in element '{}'".format(subelem.tag, elem.tag))
-        if subelem.get("name") is not None:
-            res.append(("name", subelem.get("name")))
-        elif subelem.get("codepoint") is not None:
-            res.append(("codepoint", safeEval(subelem.get("codepoint"))))
-        elif subelem.get("char") is not None:
-            res.append(("codepoint", _myord(subelem.get("char"))[0]))
-        else:
-            log.warn(
-                "ignoring Glyph element which has none of attributes 'name', 'codepoint' and 'char'.")
-        res.extend(("codepoint", c)
-                   for c in _myord_filterTabAndNewlines(subelem.tail))
+                "properties 'chars' and '{}' cannot coexist in a glyph source object".format(", ".join(i)))
+        chars = obj["chars"]
+        if isinstance(chars, list):
+            chars = "".join(chars)
+        return [{"codepoint": c} for c in _myord(chars)]
+
+    res = {}
+    if "name" in obj:
+        res["name"] = obj["name"]
+
+    if "codepoint" in obj:
+        res["codepoint"] = obj["codepoint"]
+    if "char" in obj:
+        if "codepoint" in obj:
+            raise ConfigFileError(
+                "properties 'char' and 'codepoint' cannot coexist in a glyph source object")
+        ords = _myord(obj["char"])
+        if len(ords) != 1:
+            raise ConfigFileError(
+                "property 'char' has {} characters".format(len(ords)))
+        res["codepoint"] = ords[0]
+
+    if "name" not in res and "codepoint" not in res:
+        raise ConfigFileError(
+            "Either 'name', 'codepoint', 'char' or 'chars' is required in a glyph source object")
+
+    return [res]
+
+
+# unused
+def _isVariationSelector(code):
+    return 0xFE00 <= code <= 0xFE0F or 0xE0100 <= code <= 0xE01EF
+
+
+def _getEffectTargetInfos(targets):
+    res = []
+    keys = {"all_glyphs", "name", "codepoint", "char", "chars"}
+
+    if not isinstance(targets, list):
+        targets = [targets]
+
+    for target in targets:
+        i = keys.intersection(target.keys())
+        if len(i) != 1:
+            raise ConfigFileError("invalid effect target")
+        key = list(i)[0]
+        if key == "all_glyphs":
+            res.append({"all_glyphs": True})
+        elif key == "name":
+            res.append({"name": target["name"]})
+        elif key == "codepoint":
+            res.append({"codepoint": target["codepoint"]})
+        elif key == "char":
+            ords = _myord(target["char"])
+            if len(ords) != 1:
+                raise ConfigFileError(
+                    "property 'char' has {} characters".format(len(ords)))
+            res.append({"codepoint": ords[0]})
+        elif key == "chars":
+            res.extend({"codepoint": c} for c in _myord(target["chars"]))
     return res
 
 
@@ -168,7 +174,7 @@ class NameRecord(object):
 
 
 class FontInfo(object):
-    def __init__(self):
+    def __init__(self, obj={}):
         self.settings = {
             "ascent": 0,
             "descent": 0,
@@ -176,58 +182,46 @@ class FontInfo(object):
             "vertascent": 0,
             "vertdescent": 0,
             "bold": 0,
-            "italic": 0
+            "italic": 0,
         }
         self.names = []
         self.cffNames = None
 
-    def fromXML(self, elem):
-        if elem.tag == "setting":
-            key = _findAttrOrError(elem, "key")
-            val = _findAttrOrError(elem, "value")
-            if key in ("ascent", "descent", "x-height", "vertascent", "vertdescent", "bold", "italic"):
-                val = safeEval(val)
-            else:
-                log.warn(
-                    "ignoring unknown parameter '{}' in FontInfo.".format(key))
-                return
-            self.settings[key] = val
-        elif elem.tag == "namerecords":
-            platformID = safeEval(_findAttrOrError(elem, "platformID"))
-            platEncID = safeEval(_findAttrOrError(elem, "platEncID"))
-            langID = safeEval(_findAttrOrError(elem, "langID"))
+        if "settings" in obj:
+            self.settings.update(obj["settings"])
 
-            try:
-                list(platformID)
-            except TypeError:
-                platformID = (platformID, )
-                platEncID = (platEncID, )
-                langID = (langID, )
+        if "namerecords" in obj:
+            for record in obj["namerecords"]:
+                platformID = getItem(record, "platformID")
+                platEncID = getItem(record, "platEncID")
+                langID = getItem(record, "langID")
 
-            if not (len(platformID) == len(platEncID) == len(langID)):
-                raise ConfigFileError(
-                    "each of platformID, platEncID and langID must have the same number of values")
+                if not isinstance(platformID, list):
+                    platformID = [platformID]
+                    platEncID = [platEncID]
+                    langID = [langID]
 
-            records = {}
-            for r in elem:
-                if r.get("nameID") is not None:
-                    nameID = safeEval(r.get("nameID"))
-                else:
-                    keyword = _findAttrOrError(r, "key")
-                    nameID = _nameKeyword2nameID.get(keyword.lower())
-                    if nameID is None:
-                        log.warn(
-                            "ignoring unknown keyword '{}' in namerecord.".format(keyword))
-                        continue
-                records[nameID] = _findAttrOrError(r, "value")
+                if not (len(platformID) == len(platEncID) == len(langID)):
+                    raise ConfigFileError(
+                        "each of platformID, platEncID and langID must have the same number of values")
 
-            self.names.append(NameRecord(
-                platformID, platEncID, langID, records))
+                records = {}
+                for keyword, value in record["namerecord"].items():
+                    if keyword.isdigit():
+                        nameID = int(keyword)
+                    else:
+                        nameID = _nameKeyword2nameID.get(keyword.lower())
+                        if nameID is None:
+                            log.warn(
+                                "ignoring unknown keyword '{}' in namerecord.".format(keyword))
+                            continue
+                    records[nameID] = value
 
-            if safeEval(elem.get("useAsCFFNames", "False")):
-                self.cffNames = records
-        else:
-            log.warn("ignoring unknown element '{}' in FontInfo.".format(elem.tag))
+                self.names.append(NameRecord(
+                    platformID, platEncID, langID, records))
+
+                if record.get("useAsCFFNames", False):
+                    self.cffNames = records
 
     def getCFFNames(self):
         if self.cffNames is not None:
@@ -253,172 +247,106 @@ class Config(object):
     def __init__(self, configfilepath):
         configdirpath = os.path.dirname(configfilepath)
 
-        root = ElementTree.parse(configfilepath)
-        self.templateTTXpath = os.path.join(
-            configdirpath, _findChildOrError(root, "TemplateTTX", "src"))
+        with open(configfilepath, "r") as configfile:
+            config = json.load(configfile)
 
-        self.outputTo = os.path.splitext(configfilepath)[0] + ".otf"
-        outputTo = root.find("./Output")
-        if outputTo is not None:
-            self.outputTo = os.path.join(
-                configdirpath, outputTo.get("path", self.outputTo))
+        if "ttx" in config:
+            templates = config["ttx"]
+            if isinstance(templates, basestring):
+                templates = [templates]
+            self.templates = [os.path.join(configdirpath, path)
+                              for path in templates]
+        else:
+            # FIXME
+            raise ConfigFileError("No template found")
 
-        fontinfo = _findChildOrError(root, "FontInfo")
-        self.fontinfo = FontInfo()
-        for elem in fontinfo:
-            self.fontinfo.fromXML(elem)
+        if "output" in config:
+            self.outputTo = os.path.join(configdirpath, config["output"])
+        else:
+            self.outputTo = os.path.splitext(configfilepath)[0] + ".otf"
 
-        outline = _findChildOrError(root, "Outline")
+        fontinfo = getItem(config, "fontInfo")
+        self.fontinfo = FontInfo(fontinfo)
+
         self.outlineCfg = {
-            "dotsize_x": 100,
-            "dotsize_y": 100,
-            "shapetype": "pixel-outline",
-            "shapesrc": None,
-            "shapesize_x": 1.0,
-            "shapesize_y": 1.0
+            "dotSize": [100, 100],
+            "dotShape": "pixel-outline",
         }
+        self.outlineCfg.update(getItem(config, "outline"))
 
-        dotsize = outline.find("./DotSize")
-        if dotsize is not None:
-            self.outlineCfg["dotsize_x"] = safeEval(dotsize.get("x", "100"))
-            self.outlineCfg["dotsize_y"] = safeEval(dotsize.get("y", "100"))
+        dotshape = self.outlineCfg["dotShape"]
+        if isinstance(dotshape, basestring):
+            if dotshape != "pixel-outline":
+                raise ConfigFileError(
+                    "unknown dot shape type '{}'".format(dotshape))
+        else:
+            dotshape["src"] = os.path.join(
+                configdirpath, getItem(dotshape, "src", "dotShape"))
+            dotshape.setdefault("scale", [1.0, 1.0])
 
-        dotshape = outline.find("./DotShape")
-        if dotshape is not None:
-            shapetype = dotshape.get("type")
-            if shapetype is not None:
-                if shapetype != "pixel-outline":
-                    raise ConfigFileError(
-                        "unknown dot shape type '{}'".format(shapetype))
-                self.outlineCfg["shapetype"] = shapetype
-            else:
-                shapesrc = dotshape.get("src")
-                if shapesrc is None:
-                    raise ConfigFileError(
-                        "Either attribute 'type' or 'src' is required for 'DotShape' element")
-                self.outlineCfg["shapetype"] = None
-                self.outlineCfg["shapesrc"] = os.path.join(
-                    configdirpath, shapesrc)
-                self.outlineCfg["shapescale_x"] = float(
-                    dotshape.get("width", "1.0"))
-                self.outlineCfg["shapescale_y"] = float(
-                    dotshape.get("height", "1.0"))
+        self.generateBitmap = config.get("bitmap", False)
 
-        bitmap = root.find("./Bitmap")
-        self.generateBitmap = bitmap is not None
-
-        glyphsrcs = _findChildOrError(root, "GlyphSources")
+        glyphsrcs = getItem(config, "glyphs")
         self.glyphsources = []
 
-        default_settings = _getGlyphOptions(glyphsrcs, basepath=configdirpath)
-        for glyphsrc in glyphsrcs:
-            glyphsrc_settings = _getGlyphOptions(
-                glyphsrc, default_settings, basepath=configdirpath)
-            if glyphsrc.tag == "BitmapData":
-                glyph = GlyphSourceBitmap(
-                    glyphsrc.text, **dict(glyphsrc_settings))
-                self.glyphsources.append(glyph)
-            elif glyphsrc.tag == "Space":
-                glyph = GlyphSourceSpace(**dict(glyphsrc_settings))
-                self.glyphsources.append(glyph)
-            elif glyphsrc.tag == "Spaces":
-                chars = _getCodepointList(glyphsrc)
-                for char in chars:
-                    glyph = GlyphSourceSpace(
-                        **dict(glyphsrc_settings + [("codepoint", char)]))
-                    self.glyphsources.append(glyph)
-            elif glyphsrc.tag == "Image":
-                image_stepx = glyphsrc.get("stepx", "None")
-                image_stepy = glyphsrc.get("stepy", "None")
-                image_charsperrow = glyphsrc.get("charsPerRow")
-                for glypharea in glyphsrc:
-                    glypharea_settings = _getGlyphOptions(
-                        glypharea, glyphsrc_settings, basepath=configdirpath)
-                    if glypharea.tag == "Glyph":
-                        glyph = GlyphSourceImage(**dict(glypharea_settings))
-                        self.glyphsources.append(glyph)
-                    elif glypharea.tag == "Glyphs":
-                        d = dict(glypharea_settings)
-                        x = d["x"]
-                        y = d["y"]
-                        stepx = safeEval(glypharea.get("stepx", image_stepx))
-                        stepy = safeEval(glypharea.get("stepy", image_stepy))
-                        charsperrow = safeEval(glypharea.get(
-                            "charsPerRow", image_charsperrow))
-                        if stepx is None or stepy is None or charsperrow is None:
-                            raise ConfigFileError(
-                                "all of stepx, stepy and charsPerRow attributes must be specified in either Image or Glyphs element")
-                        glyphopts = _getNameOrCodepointList(glypharea)
-                        x0 = x
-                        for i, glyphopt in enumerate(glyphopts):
-                            glyph = GlyphSourceImage(**dict(glypharea_settings + [
-                                ("x", x), ("y", y),
-                                glyphopt
-                            ]))
-                            self.glyphsources.append(glyph)
-                            if (i + 1) % charsperrow == 0:
-                                x = x0
-                                y += stepy
-                            else:
-                                x += stepx
-                    else:
-                        raise ConfigFileError(
-                            "unknown element '{}' in Image element".format(glypharea.tag))
-            elif glyphsrc.tag == "Copy":
-                if glyphsrc.get("fromChar") is not None:
-                    glyphopt = ("srccodepoint", _myord(
-                        glyphsrc.get("fromChar"))[0])
-                elif glyphsrc.get("fromCodepoint") is not None:
-                    glyphopt = ("srccodepoint", safeEval(
-                        glyphsrc.get("fromCodepoint")))
-                elif glyphsrc.get("fromName") is not None:
-                    glyphopt = ("srcname", glyphsrc.get("fromName"))
-                else:
-                    raise ConfigFileError(
-                        "fromChar, fromCodepoint or fromName attribute is required for 'Copy' element")
-                glyph = GlyphSourceGlyph(
-                    **dict(glyphsrc_settings + [glyphopt]))
-                self.glyphsources.append(glyph)
-            else:
-                log.warn("ignoring unknown glyph source '{}'.".format(
-                    glyphsrc.tag))
-        self.effects = []
-        effects = root.find("./Effects")
-        if effects is not None:
-            for effect in effects:
-                glyphopts = _getNameOrCodepointList(
-                    effect, allowAllGlyphs=True)
-                if effect.tag == "makebold":
-                    self.effects.append([glyphopts, "makebold", [
-                        safeEval(effect.get("boldtype", "0")),
-                        safeEval(effect.get("x", "1")),
-                        safeEval(effect.get("y", "0")),
-                        safeEval(effect.get("x2", "0")),
-                        safeEval(effect.get("y2", "0"))
-                    ]])
-                elif effect.tag == "makeitalic":
-                    self.effects.append([glyphopts, "makeitalic", [
-                        safeEval(_findAttrOrError(effect, "cotangent")),
-                    ]])
-                elif effect.tag == "translate":
-                    self.effects.append([glyphopts, "translate", [
-                        safeEval(effect.get("x", "0")),
-                        safeEval(effect.get("y", "0"))
-                    ]])
-                elif effect.tag == "rotate":
-                    self.effects.append([glyphopts, "rotate", [
-                        safeEval(effect.get("n", "1"))
-                    ]])
-                elif effect.tag == "scale":
-                    self.effects.append([glyphopts, "scale", [
-                        safeEval(effect.get("x", "1")),
-                        safeEval(effect.get("y", "1"))
-                    ]])
-                else:
-                    log.warn("ignoring unknown effect '{}'".format(effect.tag))
+        source_classes = {
+            "data": GlyphSourceBitmap,
+            "space": GlyphSourceSpace,
+            "image": GlyphSourceImage,
+            "copy": GlyphSourceGlyph,
+        }
+        default_geometry = _getGlyphGeometricOptions(glyphsrcs)
+        for glyphsrc in getItem(glyphsrcs, "sources", "glyphs object"):
+            glyph_settings = _getGlyphGeometricOptions(
+                glyphsrc, default_geometry)
+            glyph_slots = _getGlyphSlotInfos(glyphsrc)
+            i = set(source_classes.keys()).intersection(glyphsrc.keys())
+            if len(i) != 1:
+                raise ConfigFileError("Invalid glyph source")
+            source_type = list(i)[0]
+            klass = source_classes[source_type]
+            opts = glyphsrc[source_type]
+            glyphs = klass.parse_config(
+                opts, slots=glyph_slots, opts=glyph_settings, basepath=configdirpath)
+            self.glyphsources.extend(glyphs)
 
-        self.templateTTX2 = [os.path.join(configdirpath, _findAttrOrError(
-            templateTTX2, "src")) for templateTTX2 in root.iterfind("./TemplateTTX2")]
+        self.effects = []
+        effects = config.get("effects", [])
+        effectNames = {"makebold", "makeitalic",
+                       "translate", "rotate", "scale"}
+        for effect in effects:
+            i = effectNames.intersection(effect.keys())
+            if not i:
+                logging.warn("ignoring unknown effect")
+                continue
+            if len(i) > 1:
+                raise ConfigFileError(
+                    "multiple effects ({}) cannot be applied at once".format(", ".join(i)))
+            effectName = list(i)[0]
+            effectValue = effect[effectName]
+            targets = _getEffectTargetInfos(getItem(effect, "target"))
+            if effectName == "makebold":
+                self.effects.append([targets, effectName, [
+                    effectValue.get("boldtype", 0),
+                    effectValue.get("x", 1),
+                    effectValue.get("y", 0),
+                    effectValue.get("x2", 0),
+                    effectValue.get("y2", 0)
+                ]])
+            if effectName == "makeitalic":
+                self.effects.append([targets, effectName, effectValue])
+            if effectName == "translate":
+                self.effects.append([targets, effectName, effectValue])
+            if effectName == "rotate":
+                self.effects.append([targets, effectName, effectValue])
+            if effectName == "scale":
+                self.effects.append([targets, effectName, effectValue])
+
+        after_templates = config.get("ttx_after", [])
+        if isinstance(after_templates, basestring):
+            after_templates = [after_templates]
+        self.templateTTX2 = [os.path.join(configdirpath, path)
+                             for path in after_templates]
 
     def toBitmapFont(self):
         bitmapfont = BitmapFont(fontinfo=self.fontinfo, outlineCfg=self.outlineCfg,
@@ -427,20 +355,22 @@ class Config(object):
             bitmapfont.appendGlyph(glyphsrc.toGlyph(bitmapfont))
 
         for gopts, effname, effargs in self.effects:
-            for goptname, val in gopts:
-                if goptname == "codepoint":
-                    glyphs = [bitmapfont.getGlyphByCodepoint(val)]
+            for gopt in gopts:
+                if "codepoint" in gopt:
+                    codepoint = gopt["codepoint"]
+                    glyphs = [bitmapfont.getGlyphByCodepoint(codepoint)]
                     if glyphs[0] is None:
                         log.warn(
-                            "glyph to apply effect '{}' (U+{:04x}) was not found.".format(effname, val))
+                            "glyph to apply effect '{}' (U+{:04x}) was not found.".format(effname, codepoint))
                         continue
-                elif goptname == "name":
-                    glyphs = [bitmapfont.getGlyphByName(val)]
+                elif "name" in gopt:
+                    name = gopt["name"]
+                    glyphs = [bitmapfont.getGlyphByName(name)]
                     if glyphs[0] is None:
                         log.warn("glyph to apply effect '{}' (name='{}') was not found.".format(
-                            effname, val))
+                            effname, name))
                         continue
-                elif goptname == "allglyphs":
+                elif "all_glyphs" in gopt:
                     glyphs = bitmapfont.glyphs
                 for glyph in glyphs:
                     getattr(glyph.bitmap, effname)(*effargs)
@@ -448,12 +378,12 @@ class Config(object):
         return bitmapfont
 
     def shape(self):
-        if self.outlineCfg["shapetype"] is not None:
-            # if self.outlineCfg["shapetype"] == "pixel-outline":
+        dotShape = self.outlineCfg["dotShape"]
+        if isinstance(dotShape, basestring):
+            # if dotShape == "pixel-outline":
             shape = DotShapePixelOutline()
         else:
-            shape = DotShapeExternal(
-                self.outlineCfg["shapesrc"], self.outlineCfg["shapescale_x"], self.outlineCfg["shapescale_y"])
+            shape = DotShapeExternal(dotShape["src"], dotShape["scale"])
 
         return shape
 
@@ -462,15 +392,16 @@ _UNIXXXX_REGEXP = re.compile(r"^u(?:ni)?([0-9A-Fa-f]{4,})$")
 
 
 class GlyphSource(object):
-    def __init__(self, bitmapwidth, bitmapheight, advancewidth=0, advanceheight=0, originx=0, originy=0, voriginy=0, name=None, codepoint=-1, effects=None):
-        self.bitmapwidth = bitmapwidth
-        self.bitmapheight = bitmapheight
-        self.advancewidth = advancewidth
-        self.advanceheight = advanceheight
+    def __init__(self, slot, opts):
+        self.bitmapSize = getItem(opts, "bitmapSize")
+        self.advancewidth = opts.get("advancewidth", 0)
+        self.advanceheight = opts.get("advanceheight", 0)
 
-        self.origin = (originx, originy)
-        self.voriginy = voriginy
+        self.origin = opts.get("origin", [0, 0])
+        self.voriginy = opts.get("voriginy", 0)
 
+        name = slot.get("name", None)
+        codepoint = slot.get("codepoint", -1)
         assert name is not None or codepoint != -1
 
         if name is None and codepoint != -1:
@@ -482,9 +413,7 @@ class GlyphSource(object):
         self.name = name
         self.codepoint = codepoint
 
-        if effects is None:
-            effects = []
-        self.effects = effects
+        self.effects = []
 
     _glyph = None
 
@@ -494,64 +423,118 @@ class GlyphSource(object):
         return self._glyph
 
 
-_GBITMAP_IGNORE_REGEXP = re.compile(r"[\t\r\n]+")
-
-
 class GlyphSourceBitmap(GlyphSource):
-    def __init__(self, bitmapstring, bitmapwidth, bitmapheight, *args, **kwargs):
-        super(GlyphSourceBitmap, self).__init__(
-            bitmapwidth, bitmapheight, *args, **kwargs)
-        bitmapstring = _GBITMAP_IGNORE_REGEXP.sub("", bitmapstring)
-        bitmap = [
-            c not in "0 ." for c in bitmapstring if not 0xDC00 <= ord(c) <= 0xDFFF]
-        self.bitmap = [bitmap[i:i + bitmapwidth]
-                       for i in range(0, bitmapwidth * bitmapheight, bitmapwidth)]
-        self.bitmap.reverse()
-        for row in self.bitmap:
+    def __init__(self, bitmap, slot, opts):
+        super(GlyphSourceBitmap, self).__init__(slot, opts)
+        bitmapwidth, bitmapheight = self.bitmapSize
+        if len(bitmap) < bitmapheight:
+            bitmap.extend([] for i in range(bitmapheight - len(bitmap)))
+        for row in bitmap:
             if len(row) < bitmapwidth:
                 row += [False] * (bitmapwidth - len(row))
+        bitmap.reverse()
+        self.bitmap = bitmap
 
     def _toGlyph(self, font):
         return BitmapGlyph(self.codepoint, self.name, self.bitmap, origin=self.origin, advance=(self.advancewidth, self.advanceheight), voriginy=self.voriginy)
 
+    @classmethod
+    def data2bitmap(cls, data, opts):
+        bitmapwidth, bitmapheight = opts.get("bitmapSize", [0, 0])
+        if isinstance(data, basestring):
+            bits = [c not in "0 ." for c in data
+                    if c not in "\t\r\n" and not 0xDC00 <= ord(c) <= 0xDFFF]
+            return [bits[i:i + bitmapwidth]
+                    for i in range(0, bitmapwidth * bitmapheight, bitmapwidth)]
+        return [
+            [c not in "0 ." for c in row
+             if c not in "\t\r\n" and not 0xDC00 <= ord(c) <= 0xDFFF]
+            if isinstance(row, basestring) else [bool(c) for c in row]
+            for row in data]
+
+    @classmethod
+    def parse_config(cls, obj, slots, opts, basepath=""):
+        return [cls(cls.data2bitmap(obj, opts), slot=slot, opts=opts) for slot in slots]
+
 
 class GlyphSourceSpace(GlyphSourceBitmap):
-    def __init__(self, bitmapwidth, bitmapheight, *args, **kwargs):
-        super(GlyphSourceSpace, self).__init__("", 1, 1, *args, **kwargs)
+    def __init__(self, slot, opts):
+        opts["bitmapSize"] = [1, 1]
+        super(GlyphSourceSpace, self).__init__([[False]], slot, opts)
+
+    @classmethod
+    def parse_config(cls, obj, slots, opts, basepath=""):
+        return [cls(slot=slot, opts=opts) for slot in slots]
 
 
 class GlyphSourceImage(GlyphSource):
-    def __init__(self, src, x, y, *args, **kwargs):
-        super(GlyphSourceImage, self).__init__(*args, **kwargs)
+    def __init__(self, src, pos, slot, opts):
+        super(GlyphSourceImage, self).__init__(slot, opts)
         self.src = src
-        self.x = x
-        self.y = y
+        self.pos = pos
 
     def _toGlyph(self, font):
-        w = self.bitmapwidth
-        h = self.bitmapheight
+        w, h = self.bitmapSize
+        x, y = self.pos
         img = getImage(self.src)
-        imagedata = list(
-            img.crop((self.x, self.y, self.x + w, self.y + h)).getdata())
+        imagedata = list(img.crop((x, y, x + w, y + h)).getdata())
         bitmap = [[v == 0 for v in imagedata[i:i + w]]
                   for i in range(0, w * h, w)]
         bitmap.reverse()
         return BitmapGlyph(self.codepoint, self.name, bitmap, origin=self.origin, advance=(self.advancewidth, self.advanceheight), voriginy=self.voriginy)
 
+    @classmethod
+    def parse_config(cls, obj, slots, opts, basepath):
+        x, y = getItem(obj, "pos")
+        src = getItem(obj, "src")
+        glyphs = []
+        x0 = x
+        assert len(slots) > 0
+        if len(slots) == 1:
+            return [cls(os.path.join(basepath, src), [x, y], slot=slots[0], opts=opts)]
+
+        dx, dy = getItem(obj, "step")
+        charsperrow = getItem(obj, "charsPerRow")
+
+        for i, slot in enumerate(slots):
+            glyphs.append(cls(os.path.join(basepath, src),
+                              [x, y], slot=slot, opts=opts))
+            if (i + 1) % charsperrow == 0:
+                x = x0
+                y += dy
+            else:
+                x += dx
+        return glyphs
+
 
 class GlyphSourceGlyph(GlyphSource):
-    def __init__(self, srcname=None, srccodepoint=None, *args, **kwargs):
-        super(GlyphSourceGlyph, self).__init__(*args, **kwargs)
-        self.srcname = srcname
-        self.srccodepoint = srccodepoint
+    def __init__(self, src, slot, opts):
+        super(GlyphSourceGlyph, self).__init__(slot=slot, opts=opts)
+        self.src = src
 
     def _toGlyph(self, font):
-        assert (self.srcname or self.srccodepoint) is not None
-        if self.srcname is not None:
-            g = font.getGlyphByName(self.srcname)
-        elif self.srccodepoint is not None:
-            g = font.getGlyphByCodepoint(self.srccodepoint)
+        if "name" in self.src:
+            g = font.getGlyphByName(self.src["name"])
+        elif "codepoint" in self.src:
+            g = font.getGlyphByCodepoint(self.src["codepoint"])
         return BitmapGlyph(self.codepoint, self.name, g.bitmap.bitmap, origin=self.origin, advance=(self.advancewidth, self.advanceheight), voriginy=self.voriginy)
+
+    @classmethod
+    def parse_config(cls, obj, slots, opts, basepath=""):
+        if "fromChar" in obj:
+            ords = _myord(obj["fromChar"])
+            if len(ords) != 1:
+                raise ConfigFileError(
+                    "'fromChar' property has {} characters".format(len(ords)))
+            src = {"codepoint": ords[0]}
+        elif "fromCodepoint" in obj:
+            src = {"codepoint": obj["fromCodepoint"]}
+        elif "fromName" in obj:
+            src = {"name": obj["fromName"]}
+        else:
+            raise ConfigFileError(
+                "fromChar, fromCodepoint or fromName property is required in a 'copy' source object")
+        return [cls(src, slot=slot, opts=opts) for slot in slots]
 
 
 def memoize(f):

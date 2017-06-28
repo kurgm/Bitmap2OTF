@@ -99,7 +99,7 @@ _FACTOR_XORY_RE = re.compile(r"^[+-]?[\d.]+(?:e[+-]?\d+)?[xy]$")
 
 
 class DotShapeExternal(DotShape):
-    def __init__(self, src, sx=1.0, sy=1.0):
+    def __init__(self, src, scale=(1.0, 1.0)):
         shape = ElementTree.parse(src).getroot()
         startX = shape.get("startX", "0x")
         startY = shape.get("startY", "0y")
@@ -108,8 +108,7 @@ class DotShapeExternal(DotShape):
         self.endX = shape.get("endX", startX)
         self.endY = shape.get("endY", startY)
         self.charstring = shape.text
-        self.sx = sx
-        self.sy = sy
+        self.sx, scale.sy = scale
         self.bbx = [
             shape.get("minX", "0x"),
             shape.get("minY", "0y"),

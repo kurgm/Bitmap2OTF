@@ -69,9 +69,10 @@ def main(configfilepath):
     cfg = Config(configfilepath)
     f = cfg.toBitmapFont()
     otf = ttLib.TTFont()
-    otf.importXML(cfg.templateTTXpath)
+    for path in cfg.templates:
+        otf.importXML(path)
 
-    dw, dh = cfg.outlineCfg["dotsize_x"], cfg.outlineCfg["dotsize_y"]
+    dw, dh = cfg.outlineCfg["dotSize"]
 
     glyphOrder = []
     otf.setGlyphOrder(glyphOrder)
