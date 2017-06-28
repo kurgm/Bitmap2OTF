@@ -47,11 +47,10 @@
 		"dotSize": [100.0, 100.0],
 		"dotShape": "pixel-outline"
 	},
-	"glyphSources": {
-		"bitmapwidth": 5,
-		"bitmapheight": 11,
-		"originx": 0,
-		"originy": 2,
+	"bitmap": true,
+	"glyphs": {
+		"bitmapSize": [5, 11],
+		"origin": [0, 2],
 		"advancewidth": 6,
 		"advanceheight": 12,
 		"sources": [
@@ -103,10 +102,8 @@
 				],
 				"image": {
 					"src": "sample.png",
-					"x": 5,
-					"y": 3,
-					"stepx": 8,
-					"stepy": 13,
+					"pos": [5, 3],
+					"step": [8, 13],
 					"charsPerRow": 16
 				}
 			},
@@ -114,8 +111,7 @@
 				"name": "g.salt",
 				"image": {
 					"src": "sample.png",
-					"x": 5,
-					"y": 81
+					"pos": [5, 81]
 				}
 			},
 			{
@@ -127,12 +123,11 @@
 			}
 		]
 	},
-	"effects": {
-		"chars": "Ａ",
-		"translate": {
-			"x": 3,
-			"y": 0
+	"effects": [
+		{
+			"chars": "Ａ",
+			"translate": [3, 0]
 		}
-	},
+	],
 	"ttx_after": "sample_gsub.ttx"
 }
