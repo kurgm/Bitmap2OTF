@@ -83,11 +83,11 @@
 				"space": true
 			},
 			{
-				"chars": "  ",
+				"chars": "\u0020\u00A0",
 				"space": true
 			},
 			{
-				"char": "　",
+				"char": "\u3000",
 				"advancewidth": "12",
 				"space": true
 			},
@@ -125,7 +125,11 @@
 	},
 	"effects": [
 		{
-			"chars": "Ａ",
+			"target": [
+				{
+					"chars": "Ａ"
+				}
+			],
 			"translate": [3, 0]
 		}
 	],
