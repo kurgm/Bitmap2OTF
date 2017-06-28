@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import logging
 import os.path
 import re
 from xml.etree import ElementTree
@@ -16,6 +17,8 @@ from bitmapfont import BitmapFont
 from bitmapfont import BitmapGlyph
 from dotshape import DotShapeExternal
 from dotshape import DotShapePixelOutline
+
+log = logging.getLogger(__name__)
 
 
 def _myord(c):
@@ -86,7 +89,7 @@ def _getGlyphOptions(elem, default=[], basepath=""):
 def _isVariationSelector(code):
     isVS = 0xFE00 <= code <= 0xFE0F or 0xE0100 <= code <= 0xE01EF
     if isVS:
-        print("Warning: variation selectors are not supported for now.")
+        log.warn("variation selectors are not supported for now.")
     return isVS
 
 
@@ -116,8 +119,8 @@ def _getNameOrCodepointList(elem, allowAllGlyphs=False):
         elif subelem.get("char") is not None:
             res.append(("codepoint", _myord(subelem.get("char"))[0]))
         else:
-            print(
-                "Warning: ignoring Glyph element which has none of attributes 'name', 'codepoint' and 'char'.")
+            log.warn(
+                "ignoring Glyph element which has none of attributes 'name', 'codepoint' and 'char'.")
         res.extend(("codepoint", c)
                    for c in _myord_filterTabAndNewlines(subelem.tail))
     return res
@@ -185,8 +188,8 @@ class FontInfo(object):
             if key in ("ascent", "descent", "x-height", "vertascent", "vertdescent", "bold", "italic"):
                 val = safeEval(val)
             else:
-                print(
-                    "Warning: ignoring unknown parameter '{}' in FontInfo.".format(key))
+                log.warn(
+                    "ignoring unknown parameter '{}' in FontInfo.".format(key))
                 return
             self.settings[key] = val
         elif elem.tag == "namerecords":
@@ -213,8 +216,8 @@ class FontInfo(object):
                     keyword = _findAttrOrError(r, "key")
                     nameID = _nameKeyword2nameID.get(keyword.lower())
                     if nameID is None:
-                        print(
-                            "Warning: ignoring unknown keyword '{}' in namerecord.".format(keyword))
+                        log.warn(
+                            "ignoring unknown keyword '{}' in namerecord.".format(keyword))
                         continue
                 records[nameID] = _findAttrOrError(r, "value")
 
@@ -224,7 +227,7 @@ class FontInfo(object):
             if safeEval(elem.get("useAsCFFNames", "False")):
                 self.cffNames = records
         else:
-            print("Warning: ignoring unknown element '{}' in FontInfo.".format(elem.tag))
+            log.warn("ignoring unknown element '{}' in FontInfo.".format(elem.tag))
 
     def getCFFNames(self):
         if self.cffNames is not None:
@@ -377,7 +380,7 @@ class Config(object):
                     **dict(glyphsrc_settings + [glyphopt]))
                 self.glyphsources.append(glyph)
             else:
-                print("Warning: ignoring unknown glyph source '{}'.".format(
+                log.warn("ignoring unknown glyph source '{}'.".format(
                     glyphsrc.tag))
         self.effects = []
         effects = root.find("./Effects")
@@ -412,7 +415,7 @@ class Config(object):
                         safeEval(effect.get("y", "1"))
                     ]])
                 else:
-                    print("Warning: ignoring unknown effect '{}'".format(effect.tag))
+                    log.warn("ignoring unknown effect '{}'".format(effect.tag))
 
         self.templateTTX2 = [os.path.join(configdirpath, _findAttrOrError(
             templateTTX2, "src")) for templateTTX2 in root.iterfind("./TemplateTTX2")]
@@ -428,13 +431,13 @@ class Config(object):
                 if goptname == "codepoint":
                     glyphs = [bitmapfont.getGlyphByCodepoint(val)]
                     if glyphs[0] is None:
-                        print(
-                            "Warning: glyph to apply effect '{}' (U+{:04x}) was not found.".format(effname, val))
+                        log.warn(
+                            "glyph to apply effect '{}' (U+{:04x}) was not found.".format(effname, val))
                         continue
                 elif goptname == "name":
                     glyphs = [bitmapfont.getGlyphByName(val)]
                     if glyphs[0] is None:
-                        print("Warning: glyph to apply effect '{}' (name='{}') was not found.".format(
+                        log.warn("glyph to apply effect '{}' (name='{}') was not found.".format(
                             effname, val))
                         continue
                 elif goptname == "allglyphs":

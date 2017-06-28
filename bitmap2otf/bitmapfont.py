@@ -5,7 +5,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import logging
+
 from bitmap import Bitmap
+
+log = logging.getLogger(__name__)
 
 unicodeRanges = [
     (0x0000,
@@ -193,12 +197,12 @@ class BitmapFont(object):
     def appendGlyph(self, glyph):
         if self.getGlyphByName(glyph.name) is not None:
             if glyph.name != "uni0020":
-                print("Info: there is already a glyph with name '{}' in the font and the new glyph was not added.".format(
+                log.info("there is already a glyph with name '{}' in the font and the new glyph was not added.".format(
                     glyph.name))
             return
         if glyph.codepoint != -1 and self.getGlyphByCodepoint(glyph.codepoint) is not None:
-            print(
-                "Info: there is already a glyph with codepoint U+{:04x} in the font and the new glyph was not added.".format(glyph.codepoint))
+            log.info(
+                "there is already a glyph with codepoint U+{:04x} in the font and the new glyph was not added.".format(glyph.codepoint))
             return
         self.glyphs.append(glyph)
 
