@@ -2,7 +2,7 @@
 	"ttx": "template.ttx",
 	"output": "sample.otf",
 	"fontInfo": {
-		"setting": {
+		"settings": {
 			"ascent": 9,
 			"descent": 2,
 			"x-height": 5,
