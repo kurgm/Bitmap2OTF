@@ -49,15 +49,20 @@ class BitmapFont(object):
 
     def getXAvgCharWidth(self, dw=100.0):
         # this is not the correct way of calculating xAvgCharWidth...
-        aws = [g.bitmap.advanceWidth for g in self.glyphs if 0x61 <=
-               g.codepoint <= 0x7A or g.codepoint == 0x20] or [0]
-        return int(sum(aws, 0.0) * dw / len(aws))
+        aws = [g.bitmap.advanceWidth
+               for g in self.glyphs
+               if 0x61 <= g.codepoint <= 0x7A or g.codepoint == 0x20]
+        if not aws:
+            return 0
+        return int(sum(aws) * dw / len(aws))
 
     # post table
 
     def isFixedPitch(self):
         nonzeroWidths = [
-            g.bitmap.advanceWidth for g in self.glyphs if g.bitmap.advanceWidth != 0] or [0]
+            g.bitmap.advanceWidth for g in self.glyphs if g.bitmap.advanceWidth != 0]
+        if not nonzeroWidths:
+            return True
         w0 = nonzeroWidths[0]
         return all(w == w0 for w in nonzeroWidths[1:])
 
