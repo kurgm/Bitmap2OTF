@@ -27,21 +27,21 @@ if PY2:
 else:
     basestring = str
 
+if sys.maxunicode == 0xFFFF:
+    import codecs
 
-def _myord(c):
-    buf = []
-    i = 0
-    l = len(c)
-    while i < l:
-        oc0 = ord(c[i])
-        i += 1
-        if i < l and 0xD800 <= oc0 < 0xDC00:
-            oc1 = ord(c[i])
-            i += 1
-            buf.append(0x10000 + ((oc0 & 0x3FF) << 10) | (oc1 & 0x3FF))
-        else:
-            buf.append(oc0)
-    return buf
+    def _iterstr(s):
+        return codecs.iterdecode(s.encode("utf-16_be"), encoding="utf-16_be")
+
+    def _myord(s):
+        if len(s) == 1:
+            return ord(s)
+        assert len(s) == 2 and "\uD800" <= s[0] < "\uDC00", "Invalid UTF-16 character"
+        return int(s.encode("utf-32_be").encode("hex_codec"), 16)
+
+else:
+    _iterstr = iter
+    _myord = ord
 
 
 class ConfigFileError(Exception):
@@ -73,7 +73,7 @@ def _getGlyphSlotInfos(obj):
         chars = obj["chars"]
         if isinstance(chars, list):
             chars = "".join(chars)
-        return [{"codepoint": c} for c in _myord(chars)]
+        return [{"codepoint": _myord(c)} for c in _iterstr(chars)]
 
     res = {}
     if "name" in obj:
@@ -85,11 +85,11 @@ def _getGlyphSlotInfos(obj):
         if "codepoint" in obj:
             raise ConfigFileError(
                 "properties 'char' and 'codepoint' cannot coexist in a glyph source object")
-        ords = _myord(obj["char"])
-        if len(ords) != 1:
+        chrs = list(_iterstr(obj["char"]))
+        if len(chrs) != 1:
             raise ConfigFileError(
-                "property 'char' has {} characters".format(len(ords)))
-        res["codepoint"] = ords[0]
+                "property 'char' has {} characters".format(len(chrs)))
+        res["codepoint"] = _myord(chrs[0])
 
     if "name" not in res and "codepoint" not in res:
         raise ConfigFileError(
@@ -122,13 +122,13 @@ def _getEffectTargetInfos(targets):
         elif key == "codepoint":
             res.append({"codepoint": target["codepoint"]})
         elif key == "char":
-            ords = _myord(target["char"])
-            if len(ords) != 1:
+            chrs = list(_iterstr(target["char"]))
+            if len(chrs) != 1:
                 raise ConfigFileError(
-                    "property 'char' has {} characters".format(len(ords)))
-            res.append({"codepoint": ords[0]})
+                    "property 'char' has {} characters".format(len(chrs)))
+            res.append({"codepoint": _myord(chrs[0])})
         elif key == "chars":
-            res.extend({"codepoint": c} for c in _myord(target["chars"]))
+            res.extend({"codepoint": _myord(c)} for c in _iterstr(target["chars"]))
     return res
 
 
@@ -523,11 +523,11 @@ class GlyphSourceGlyph(GlyphSource):
     @classmethod
     def parse_config(cls, obj, slots, opts, basepath=""):
         if "fromChar" in obj:
-            ords = _myord(obj["fromChar"])
-            if len(ords) != 1:
+            chrs = list(_iterstr(obj["fromChar"]))
+            if len(chrs) != 1:
                 raise ConfigFileError(
-                    "'fromChar' property has {} characters".format(len(ords)))
-            src = {"codepoint": ords[0]}
+                    "'fromChar' property has {} characters".format(len(chrs)))
+            src = {"codepoint": _myord(chrs[0])}
         elif "fromCodepoint" in obj:
             src = {"codepoint": obj["fromCodepoint"]}
         elif "fromName" in obj:
