@@ -280,8 +280,9 @@ class Config(object):
                 raise ConfigFileError(
                     "unknown dot shape type '{}'".format(dotshape))
         else:
-            dotshape["src"] = os.path.join(
-                configdirpath, getItem(dotshape, "src", "dotShape"))
+            dotshapesrc = getItem(dotshape, "src", "dotShape")
+            if isinstance(dotshapesrc, basestring):
+                dotshape["src"] = os.path.join(configdirpath, dotshapesrc)
             dotshape.setdefault("scale", [1.0, 1.0])
 
         self.generateBitmap = config.get("bitmap", False)
