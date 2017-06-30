@@ -45,6 +45,21 @@ else:
     _myord = ord
 
 
+def _isVariationSelector(code):
+    return 0xFE00 <= code <= 0xFE0F or 0xE0100 <= code <= 0xE01EF
+
+
+def _str2slots(s):
+    ret = []
+    for c in _iterstr(s):
+        o = _myord(c)
+        if _isVariationSelector(o):
+            ret[-1]["vs"] = o
+        else:
+            ret.append({"codepoint": o})
+    return ret
+
+
 class ConfigFileError(Exception):
     pass
 
@@ -74,7 +89,7 @@ def _getGlyphSlotInfos(obj):
         chars = obj["chars"]
         if isinstance(chars, list):
             chars = "".join(chars)
-        return [{"codepoint": _myord(c)} for c in _iterstr(chars)]
+        return _str2slots(chars)
 
     res = {}
     if "name" in obj:
@@ -86,22 +101,17 @@ def _getGlyphSlotInfos(obj):
         if "codepoint" in obj:
             raise ConfigFileError(
                 "properties 'char' and 'codepoint' cannot coexist in a glyph source object")
-        chrs = list(_iterstr(obj["char"]))
+        chrs = _str2slots(obj["char"])
         if len(chrs) != 1:
             raise ConfigFileError(
                 "property 'char' has {} characters".format(len(chrs)))
-        res["codepoint"] = _myord(chrs[0])
+        res.update(chrs[0])
 
     if "name" not in res and "codepoint" not in res:
         raise ConfigFileError(
             "Either 'name', 'codepoint', 'char' or 'chars' is required in a glyph source object")
 
     return [res]
-
-
-# unused
-def _isVariationSelector(code):
-    return 0xFE00 <= code <= 0xFE0F or 0xE0100 <= code <= 0xE01EF
 
 
 def _getEffectTargetInfos(targets):
@@ -123,14 +133,13 @@ def _getEffectTargetInfos(targets):
         elif key == "codepoint":
             res.append({"codepoint": target["codepoint"]})
         elif key == "char":
-            chrs = list(_iterstr(target["char"]))
+            chrs = _str2slots(target["char"])
             if len(chrs) != 1:
                 raise ConfigFileError(
                     "property 'char' has {} characters".format(len(chrs)))
-            res.append({"codepoint": _myord(chrs[0])})
+            res.append(chrs[0])
         elif key == "chars":
-            res.extend({"codepoint": _myord(c)}
-                       for c in _iterstr(target["chars"]))
+            res.extend(_str2slots(target["chars"]))
     return res
 
 
@@ -540,11 +549,11 @@ class GlyphSourceGlyph(GlyphSource):
     @classmethod
     def parse_config(cls, obj, slots, opts, basepath=""):
         if "fromChar" in obj:
-            chrs = list(_iterstr(obj["fromChar"]))
+            chrs = _str2slots(obj["fromChar"])
             if len(chrs) != 1:
                 raise ConfigFileError(
                     "'fromChar' property has {} characters".format(len(chrs)))
-            src = {"codepoint": _myord(chrs[0])}
+            src = chrs[0]
         elif "fromCodepoint" in obj:
             src = {"codepoint": obj["fromCodepoint"]}
         elif "fromName" in obj:
