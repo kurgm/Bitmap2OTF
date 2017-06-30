@@ -36,7 +36,8 @@ if sys.maxunicode == 0xFFFF:
     def _myord(s):
         if len(s) == 1:
             return ord(s)
-        assert len(s) == 2 and "\uD800" <= s[0] < "\uDC00", "Invalid UTF-16 character"
+        assert len(s) == 2 and "\uD800" <= s[0] < "\uDC00", \
+            "Invalid UTF-16 character"
         return int(s.encode("utf-32_be").encode("hex_codec"), 16)
 
 else:
@@ -128,7 +129,8 @@ def _getEffectTargetInfos(targets):
                     "property 'char' has {} characters".format(len(chrs)))
             res.append({"codepoint": _myord(chrs[0])})
         elif key == "chars":
-            res.extend({"codepoint": _myord(c)} for c in _iterstr(target["chars"]))
+            res.extend({"codepoint": _myord(c)}
+                       for c in _iterstr(target["chars"]))
     return res
 
 
@@ -437,7 +439,12 @@ class GlyphSourceBitmap(GlyphSource):
         self.bitmap = bitmap
 
     def _toGlyph(self, font):
-        return BitmapGlyph(self.codepoint, self.name, self.bitmap, origin=self.origin, advance=(self.advancewidth, self.advanceheight), voriginy=self.voriginy)
+        return BitmapGlyph(
+            self.codepoint, self.name,
+            self.bitmap,
+            origin=self.origin,
+            advance=(self.advancewidth, self.advanceheight),
+            voriginy=self.voriginy)
 
     @classmethod
     def data2bitmap(cls, data, opts):
@@ -482,7 +489,12 @@ class GlyphSourceImage(GlyphSource):
         bitmap = [[v == 0 for v in imagedata[i:i + w]]
                   for i in range(0, w * h, w)]
         bitmap.reverse()
-        return BitmapGlyph(self.codepoint, self.name, bitmap, origin=self.origin, advance=(self.advancewidth, self.advanceheight), voriginy=self.voriginy)
+        return BitmapGlyph(
+            self.codepoint, self.name,
+            bitmap,
+            origin=self.origin,
+            advance=(self.advancewidth, self.advanceheight),
+            voriginy=self.voriginy)
 
     @classmethod
     def parse_config(cls, obj, slots, opts, basepath):
@@ -518,7 +530,12 @@ class GlyphSourceGlyph(GlyphSource):
             g = font.getGlyphByName(self.src["name"])
         elif "codepoint" in self.src:
             g = font.getGlyphByCodepoint(self.src["codepoint"])
-        return BitmapGlyph(self.codepoint, self.name, g.bitmap.bitmap, origin=self.origin, advance=(self.advancewidth, self.advanceheight), voriginy=self.voriginy)
+        return BitmapGlyph(
+            self.codepoint, self.name,
+            g.bitmap.bitmap,
+            origin=self.origin,
+            advance=(self.advancewidth, self.advanceheight),
+            voriginy=self.voriginy)
 
     @classmethod
     def parse_config(cls, obj, slots, opts, basepath=""):
