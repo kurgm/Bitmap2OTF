@@ -97,6 +97,8 @@ def _getGlyphSlotInfos(obj):
 
     if "codepoint" in obj:
         res["codepoint"] = obj["codepoint"]
+        if "vs" in obj:
+            res["vs"] = obj["vs"]
     if "char" in obj:
         if "codepoint" in obj:
             raise ConfigFileError(
@@ -131,7 +133,10 @@ def _getEffectTargetInfos(targets):
         elif key == "name":
             res.append({"name": target["name"]})
         elif key == "codepoint":
-            res.append({"codepoint": target["codepoint"]})
+            slot = {"codepoint": target["codepoint"]}
+            if "vs" in target:
+                slot["vs"] = target["vs"]
+            res.append(slot)
         elif key == "char":
             chrs = _str2slots(target["char"])
             if len(chrs) != 1:
@@ -370,7 +375,8 @@ class Config(object):
             for gopt in gopts:
                 if "codepoint" in gopt:
                     codepoint = gopt["codepoint"]
-                    glyphs = [bitmapfont.getGlyphByCodepoint(codepoint)]
+                    vs = gopt.get("vs", -1)
+                    glyphs = [bitmapfont.getGlyphByCodepoint(codepoint, vs)]
                     if glyphs[0] is None:
                         log.warn(
                             "glyph to apply effect '{}' (U+{:04x}) was not found.".format(effname, codepoint))
@@ -401,6 +407,7 @@ class Config(object):
 
 
 _UNIXXXX_REGEXP = re.compile(r"^u(?:ni)?([0-9A-Fa-f]{4,})$")
+_UNIXXXX_VS_REGEXP = re.compile(r"^u(?:ni)?([0-9A-Fa-f]{4,})\.u(?:ni)?(0*[Ff][Ee]0[0-9A-Fa-f]|0*[Ee]01[0-9A-Ea-e][0-9A-Fa-f])$")
 
 
 class GlyphSource(object):
@@ -414,16 +421,26 @@ class GlyphSource(object):
 
         name = slot.get("name", None)
         codepoint = slot.get("codepoint", -1)
+        vs = slot.get("vs", -1)
         assert name is not None or codepoint != -1
 
         if name is None and codepoint != -1:
-            name = "uni{:04X}".format(codepoint)
+            if vs == -1:
+                name = "uni{:04X}".format(codepoint)
+            else:
+                name = "uni{:04X}.uni{:04X}".format(codepoint, vs)
         if codepoint == -1:
             m = _UNIXXXX_REGEXP.match(name)
             if m:
                 codepoint = int(m.group(1), 16)
+            else:
+                m = _UNIXXXX_VS_REGEXP.match(name)
+                if m:
+                    codepoint = int(m.group(1), 16)
+                    vs = int(m.group(2), 16)
         self.name = name
         self.codepoint = codepoint
+        self.vs = vs
 
         self.effects = []
 
@@ -449,7 +466,7 @@ class GlyphSourceBitmap(GlyphSource):
 
     def _toGlyph(self, font):
         return BitmapGlyph(
-            self.codepoint, self.name,
+            self.codepoint, self.vs, self.name,
             self.bitmap,
             origin=self.origin,
             advance=(self.advancewidth, self.advanceheight),
@@ -499,7 +516,7 @@ class GlyphSourceImage(GlyphSource):
                   for i in range(0, w * h, w)]
         bitmap.reverse()
         return BitmapGlyph(
-            self.codepoint, self.name,
+            self.codepoint, self.vs, self.name,
             bitmap,
             origin=self.origin,
             advance=(self.advancewidth, self.advanceheight),
@@ -538,9 +555,10 @@ class GlyphSourceGlyph(GlyphSource):
         if "name" in self.src:
             g = font.getGlyphByName(self.src["name"])
         elif "codepoint" in self.src:
-            g = font.getGlyphByCodepoint(self.src["codepoint"])
+            vs = self.src.get("vs", -1)
+            g = font.getGlyphByCodepoint(self.src["codepoint"], vs)
         return BitmapGlyph(
-            self.codepoint, self.name,
+            self.codepoint, self.vs, self.name,
             g.bitmap.bitmap,
             origin=self.origin,
             advance=(self.advancewidth, self.advanceheight),
@@ -556,6 +574,8 @@ class GlyphSourceGlyph(GlyphSource):
             src = chrs[0]
         elif "fromCodepoint" in obj:
             src = {"codepoint": obj["fromCodepoint"]}
+            if "fromVS" in obj:
+                src["vs"] = obj["fromVS"]
         elif "fromName" in obj:
             src = {"name": obj["fromName"]}
         else:

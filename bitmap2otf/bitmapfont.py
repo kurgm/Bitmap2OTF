@@ -27,9 +27,13 @@ class BitmapFont(object):
                 log.info("there is already a glyph with name '{}' in the font and the new glyph was not added.".format(
                     glyph.name))
             return
-        if glyph.codepoint != -1 and self.getGlyphByCodepoint(glyph.codepoint) is not None:
+        if glyph.codepoint != -1 and self.getGlyphByCodepoint(glyph.codepoint, glyph.vs) is not None:
+            if glyph.vs == -1:
+                cpstr = "U+{:04X}".format(glyph.codepoint)
+            else:
+                cpstr = "U+{:04X} U+{:04X}".format(glyph.codepoint, glyph.vs)
             log.info(
-                "there is already a glyph with codepoint U+{:04x} in the font and the new glyph was not added.".format(glyph.codepoint))
+                "there is already a glyph with codepoint {} in the font and the new glyph was not added.".format(cpstr))
             return
         self.glyphs.append(glyph)
 
@@ -39,9 +43,9 @@ class BitmapFont(object):
                 return g
         return None
 
-    def getGlyphByCodepoint(self, codepoint):
+    def getGlyphByCodepoint(self, codepoint, vs=-1):
         for g in self.glyphs:
-            if g.codepoint == codepoint:
+            if g.codepoint == codepoint and g.vs == vs:
                 return g
         return None
 
@@ -70,8 +74,9 @@ class BitmapFont(object):
 class BitmapGlyph(object):
     """Bitmap with name and codepoint"""
 
-    def __init__(self, codepoint, name, bitmap=[[]], *args, **kwargs):
+    def __init__(self, codepoint, vs, name, bitmap=[[]], *args, **kwargs):
         self.codepoint = codepoint
+        self.vs = vs
         self.name = name
         if isinstance(bitmap, Bitmap):
             self.bitmap = bitmap
