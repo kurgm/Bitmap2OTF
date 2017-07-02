@@ -5,8 +5,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import re
-from xml.etree import ElementTree
 
 
 def _intorfloat(v):
@@ -99,17 +99,23 @@ _FACTOR_XORY_RE = re.compile(r"^[+-]?[\d.]+(?:e[+-]?\d+)?[xy]$")
 
 
 class DotShapeExternal(DotShape):
-    def __init__(self, src, sx=1.0, sy=1.0):
-        shape = ElementTree.parse(src).getroot()
+    def __init__(self, obj, scale=(1.0, 1.0)):
+        if isinstance(obj, dict):
+            shape = obj
+        else:
+            with open(obj) as f:
+                shape = json.load(f)
         startX = shape.get("startX", "0x")
         startY = shape.get("startY", "0y")
         self.startX = startX
         self.startY = startY
         self.endX = shape.get("endX", startX)
         self.endY = shape.get("endY", startY)
-        self.charstring = shape.text
-        self.sx = sx
-        self.sy = sy
+        self.charstring = shape["data"]
+        if isinstance(scale, (tuple, list)):
+            self.sx, self.sy = scale
+        else:
+            self.sx = self.sy = scale
         self.bbx = [
             shape.get("minX", "0x"),
             shape.get("minY", "0y"),

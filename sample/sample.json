@@ -1,0 +1,137 @@
+{
+	"ttx": "template.ttx",
+	"output": "sample.otf",
+	"fontInfo": {
+		"settings": {
+			"ascent": 9,
+			"descent": 2,
+			"x-height": 5,
+			"bold": 0,
+			"italic": 0
+		},
+		"namerecords": [
+			{
+				"platformID": [1, 3],
+				"platEncID": [0, 1],
+				"langID": [0, 1033],
+				"useAsCFFNames": true,
+				"namerecord": {
+					"copyright": "(C) 20XX MyName",
+					"fontFamily": "MySample",
+					"subfamily": "Regular",
+					"uniqueID": "Bitmap2OTF : MySample Regular : 20XX-XX-XX",
+					"fullName": "MySample Regular",
+					"version": "Version 0.1",
+					"postscriptName": "MySample",
+					"preferredFamily": "MySample",
+					"preferredSubfamily": "Regular"
+				}
+			},
+			{
+				"platformID": [1, 3],
+				"platEncID": [1, 1],
+				"langID": [11, 1041],
+				"namerecord": {
+					"copyright": "(C) 20XX 我が名",
+					"fontFamily": "マイ・サンプル",
+					"subfamily": "標準",
+					"fullName": "マイ・サンプル 標準",
+					"version": "バージョン 0.1",
+					"preferredFamily": "マイ・サンプル",
+					"preferredSubfamily": "標準"
+				}
+			}
+		]
+	},
+	"outline": {
+		"dotSize": [100.0, 100.0],
+		"dotShape": "pixel-outline"
+	},
+	"bitmap": true,
+	"glyphs": {
+		"bitmapSize": [5, 11],
+		"origin": [0, 2],
+		"advancewidth": 6,
+		"advanceheight": 12,
+		"sources": [
+			{
+				"name": ".notdef",
+				"data": [
+					".....",
+					".....",
+					"@@@@@",
+					"@...@",
+					"@@.@@",
+					"@.@.@",
+					"@@.@@",
+					"@...@",
+					"@@@@@",
+					".....",
+					"....."
+				]
+			},
+			{
+				"name": ".null",
+				"codepoint": 0,
+				"advancewidth": 0,
+				"space": true
+			},
+			{
+				"name": "CR",
+				"char": "\u000D",
+				"advancewidth": 6,
+				"space": true
+			},
+			{
+				"chars": "\u0020\u00A0",
+				"space": true
+			},
+			{
+				"char": "\u3000",
+				"advancewidth": 12,
+				"space": true
+			},
+			{
+				"chars": [
+					" !\"#$%&'()*+,-./",
+					"0123456789:;<=>?",
+					"@ABCDEFGHIJKLMNO",
+					"PQRSTUVWXYZ[\\]^_",
+					"`abcdefghijklmno",
+					"pqrstuvwxyz{|}~"
+				],
+				"image": {
+					"src": "sample.png",
+					"pos": [5, 3],
+					"step": [8, 13],
+					"charsPerRow": 16
+				}
+			},
+			{
+				"name": "g.salt",
+				"image": {
+					"src": "sample.png",
+					"pos": [5, 81]
+				}
+			},
+			{
+				"char": "Ａ",
+				"advancewidth": 12,
+				"copy": {
+					"fromChar": "A"
+				}
+			}
+		]
+	},
+	"effects": [
+		{
+			"target": [
+				{
+					"chars": "Ａ"
+				}
+			],
+			"translate": [3, 0]
+		}
+	],
+	"ttx_after": "sample_gsub.ttx"
+}

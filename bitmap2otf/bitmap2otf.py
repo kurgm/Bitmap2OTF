@@ -23,10 +23,12 @@ from dotshape import _intorfloat
 version = "0.1.0"
 
 
-def addcmap(cmap, code, name, gid):
+def addcmap(cmap, code, vs, name, gid):
     for subtable in cmap.tables:
-        if isinstance(subtable, cmap_classes[14]):
-            # TODO(kurgm)  support Unicode Variation Sequences
+        if vs != -1:
+            if isinstance(subtable, cmap_classes[14]):
+                # TODO(kurgm)  support Unicode Variation Sequences
+                pass
             continue
         if isinstance(subtable, cmap_classes[0]) and (code > 0xFF or gid > 0xFF):
             continue
@@ -69,9 +71,10 @@ def main(configfilepath):
     cfg = Config(configfilepath)
     f = cfg.toBitmapFont()
     otf = ttLib.TTFont()
-    otf.importXML(cfg.templateTTXpath)
+    for path in cfg.templates:
+        otf.importXML(path)
 
-    dw, dh = cfg.outlineCfg["dotsize_x"], cfg.outlineCfg["dotsize_y"]
+    dw, dh = cfg.outlineCfg["dotSize"]
 
     glyphOrder = []
     otf.setGlyphOrder(glyphOrder)
@@ -156,7 +159,7 @@ def main(configfilepath):
     for i, g in enumerate(f.glyphs):
         glyphOrder.append(g.name)
         if g.codepoint != -1:
-            addcmap(cmap, g.codepoint, g.name, i)
+            addcmap(cmap, g.codepoint, g.vs, g.name, i)
 
         aw = g.bitmap.advanceWidth * dw
         ah = g.bitmap.advanceHeight * dh
@@ -316,6 +319,10 @@ def main(configfilepath):
 
     otf["post"].isFixedPitch = cffTopDict.isFixedPitch = f.isFixedPitch()
     mtxValue = 1.0 / ((ascent + descent) * dh)
+
+    # Fix for macOS Font Book
+    mtxValue = round(mtxValue, 16)
+
     cffTopDict.FontMatrix = [mtxValue, 0, 0, mtxValue, 0, 0]
     cffTopDict.FontBBox = fontBBX
 

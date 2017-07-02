@@ -104,7 +104,12 @@ class Bitmap(object):
         for r in bitmap:
             assert len(r) == self.width
 
-    def makebold(self, boldtype=0, x=1, y=0, x2=0, y2=0):
+    def makebold(self, options={}):
+        boldtype = options.get("boldtype", 0)
+        x = options.get("x", 1)
+        y = options.get("y", 0)
+        x2 = options.get("x2", 0)
+        y2 = options.get("y2", 0)
         for i in range(x):
             self._makebold_x(boldtype, i < x2)
 
@@ -147,7 +152,8 @@ class Bitmap(object):
         self.width = len(self.bitmap[0])
         self.origin = (ox, oy)
 
-    def translate(self, x=0, y=0):
+    def translate(self, xy=(0, 0)):
+        x, y = xy
         ox, oy = self.origin
         self.origin = (ox - x, oy - y)
 
