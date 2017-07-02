@@ -49,14 +49,19 @@ def _isVariationSelector(code):
     return 0xFE00 <= code <= 0xFE0F or 0xE0100 <= code <= 0xE01EF
 
 
-def _str2slots(s):
+def _str2slots(s, names=None):
     ret = []
+    i = 0
     for c in _iterstr(s):
         o = _myord(c)
         if _isVariationSelector(o):
             ret[-1]["vs"] = o
-        else:
-            ret.append({"codepoint": o})
+            continue
+        slot = {"codepoint": o}
+        if names is not None:
+            slot["name"] = names[i]
+        ret.append(slot)
+        i += 1
     return ret
 
 
@@ -86,10 +91,19 @@ def _getGlyphSlotInfos(obj):
         if i:
             raise ConfigFileError(
                 "properties 'chars' and '{}' cannot coexist in a glyph source object".format(", ".join(i)))
+
         chars = obj["chars"]
         if isinstance(chars, list):
             chars = "".join(chars)
-        return _str2slots(chars)
+        return _str2slots(chars, obj.get("names", None))
+
+    if "names" in obj:
+        i = {"codepoint", "name", "char"}.intersection(obj.keys())
+        if i:
+            raise ConfigFileError(
+                "properties 'names' and '{}' cannot coexist in a glyph source object".format(", ".join(i)))
+
+        return [{"name": name} for name in obj["names"]]
 
     res = {}
     if "name" in obj:
@@ -111,14 +125,14 @@ def _getGlyphSlotInfos(obj):
 
     if "name" not in res and "codepoint" not in res:
         raise ConfigFileError(
-            "Either 'name', 'codepoint', 'char' or 'chars' is required in a glyph source object")
+            "Either 'name', 'codepoint', 'char', 'chars' or 'names' is required in a glyph source object")
 
     return [res]
 
 
 def _getEffectTargetInfos(targets):
     res = []
-    keys = {"all_glyphs", "name", "codepoint", "char", "chars"}
+    keys = {"all_glyphs", "name", "codepoint", "char", "chars", "names"}
 
     if not isinstance(targets, list):
         targets = [targets]
@@ -145,6 +159,8 @@ def _getEffectTargetInfos(targets):
             res.append(chrs[0])
         elif key == "chars":
             res.extend(_str2slots(target["chars"]))
+        elif key == "names":
+            res.extend({"name": name} for name in target["names"])
     return res
 
 
