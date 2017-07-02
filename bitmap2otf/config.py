@@ -358,22 +358,7 @@ class Config(object):
             effectName = list(i)[0]
             effectValue = effect[effectName]
             targets = _getEffectTargetInfos(getItem(effect, "target"))
-            if effectName == "makebold":
-                self.effects.append([targets, effectName, [
-                    effectValue.get("boldtype", 0),
-                    effectValue.get("x", 1),
-                    effectValue.get("y", 0),
-                    effectValue.get("x2", 0),
-                    effectValue.get("y2", 0)
-                ]])
-            if effectName == "makeitalic":
-                self.effects.append([targets, effectName, effectValue])
-            if effectName == "translate":
-                self.effects.append([targets, effectName, effectValue])
-            if effectName == "rotate":
-                self.effects.append([targets, effectName, effectValue])
-            if effectName == "scale":
-                self.effects.append([targets, effectName, effectValue])
+            self.effects.append([targets, effectName, effectValue])
 
         after_templates = config.get("ttx_after", [])
         if isinstance(after_templates, basestring):
@@ -387,7 +372,7 @@ class Config(object):
         for glyphsrc in self.glyphsources:
             bitmapfont.appendGlyph(glyphsrc.toGlyph(bitmapfont))
 
-        for gopts, effname, effargs in self.effects:
+        for gopts, effname, effarg in self.effects:
             for gopt in gopts:
                 if "codepoint" in gopt:
                     codepoint = gopt["codepoint"]
@@ -407,7 +392,7 @@ class Config(object):
                 elif "all_glyphs" in gopt:
                     glyphs = bitmapfont.glyphs
                 for glyph in glyphs:
-                    getattr(glyph.bitmap, effname)(*effargs)
+                    getattr(glyph.bitmap, effname)(effarg)
 
         return bitmapfont
 
