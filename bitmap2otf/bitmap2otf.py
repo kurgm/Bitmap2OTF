@@ -319,6 +319,10 @@ def main(configfilepath):
 
     otf["post"].isFixedPitch = cffTopDict.isFixedPitch = f.isFixedPitch()
     mtxValue = 1.0 / ((ascent + descent) * dh)
+
+    # Fix for macOS Font Book
+    mtxValue = round(mtxValue, 16)
+
     cffTopDict.FontMatrix = [mtxValue, 0, 0, mtxValue, 0, 0]
     cffTopDict.FontBBox = fontBBX
 
