@@ -270,6 +270,11 @@ class Bitmap(object):
         for v in vertices:
             vertices_by_dir_in[v[2]].append(v)
 
+        vertices_by_dir_in[_D].sort(key=lambda vn: vn[1])
+        vertices_by_dir_in[_U].sort(key=lambda vn: vn[1], reverse=True)
+        vertices_by_dir_in[_L].sort(key=lambda vn: vn[0])
+        vertices_by_dir_in[_R].sort(key=lambda vn: vn[0], reverse=True)
+
         polygons = []
         while vertices:
             polygon = []
@@ -280,25 +285,17 @@ class Bitmap(object):
 
                 next_dir_in = 3 - v[3]
                 if next_dir_in == _D:
-                    v1 = min(
-                        (vn for vn in vertices_by_dir_in[_D]
-                            if vn[0] == v[0] and vn[1] > v[1]),
-                        key=lambda vn: vn[1])
+                    v1 = next(vn for vn in vertices_by_dir_in[_D]
+                              if vn[0] == v[0] and vn[1] > v[1])
                 elif next_dir_in == _U:
-                    v1 = max(
-                        (vn for vn in vertices_by_dir_in[_U]
-                            if vn[0] == v[0] and vn[1] < v[1]),
-                        key=lambda vn: vn[1])
+                    v1 = next(vn for vn in vertices_by_dir_in[_U]
+                              if vn[0] == v[0] and vn[1] < v[1])
                 elif next_dir_in == _L:
-                    v1 = min(
-                        (vn for vn in vertices_by_dir_in[_L]
-                            if vn[1] == v[1] and vn[0] > v[0]),
-                        key=lambda vn: vn[0])
+                    v1 = next(vn for vn in vertices_by_dir_in[_L]
+                              if vn[1] == v[1] and vn[0] > v[0])
                 elif next_dir_in == _R:
-                    v1 = max(
-                        (vn for vn in vertices_by_dir_in[_R]
-                            if vn[1] == v[1] and vn[0] < v[0]),
-                        key=lambda vn: vn[0])
+                    v1 = next(vn for vn in vertices_by_dir_in[_R]
+                              if vn[1] == v[1] and vn[0] < v[0])
                 vertices.remove(v1)
                 vertices_by_dir_in[v1[2]].remove(v1)
                 if v1 is v0:
