@@ -4,14 +4,14 @@
 ## 要件
 Bitmap2OTF の実行には以下のソフトウェアとライブラリが必要です:
 
-- Python 2.7
+- Python
 - [fontTools](https://github.com/behdad/fonttools)
 - [Python Imaging Library (PIL)](http://www.pythonware.com/products/pil/)
 
 ## 使い方
 `python bitmap2otf.py PARAMETER-FILE.json`
 
-`PARAMETER-FILE.json` は XML-ベースのパラメータファイルです。サンプルは
+`PARAMETER-FILE.json` は JSON-ベースのパラメータファイルです。サンプルは
 `sample/sample.json` にあります。
 
 ## ライセンス
